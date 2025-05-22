@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceBusEmulator.Healthcheck", "ServiceBusEmulator.Healthcheck\ServiceBusEmulator.Healthcheck.csproj", "{B839FBE1-80DE-4317-9BB3-30FA569A31BD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceBusEmulator.Healthcheck.Tests", "ServiceBusEmulator.Healthcheck.Tests\ServiceBusEmulator.Healthcheck.Tests.csproj", "{42441310-5ED1-4C7D-A672-8079199531DF}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Compose", "Compose", "{48BE0D33-DE69-4B80-843B-F2F65C24E0CD}"
+	ProjectSection(SolutionItems) = preProject
+		Compose\Config.json = Compose\Config.json
+		Compose\docker-compose.yaml = Compose\docker-compose.yaml
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B839FBE1-80DE-4317-9BB3-30FA569A31BD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B839FBE1-80DE-4317-9BB3-30FA569A31BD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B839FBE1-80DE-4317-9BB3-30FA569A31BD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B839FBE1-80DE-4317-9BB3-30FA569A31BD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{42441310-5ED1-4C7D-A672-8079199531DF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{42441310-5ED1-4C7D-A672-8079199531DF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{42441310-5ED1-4C7D-A672-8079199531DF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{42441310-5ED1-4C7D-A672-8079199531DF}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

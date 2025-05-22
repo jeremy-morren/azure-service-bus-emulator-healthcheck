@@ -1,0 +1,20 @@
+# This is a generated file. Not intended for manual editing.
+services:
+  servicebus-healthcheck:
+    build:
+      context: "C:\\Users\\jerem\\repos\\Testing\\ServiceBusEmulator\\ServiceBusEmulator.Healthcheck"
+      dockerfile: "Dockerfile"
+      target: "build"
+    command: []
+    entrypoint:
+    - "dotnet"
+    - "/app/bin/Debug/net8.0/ServiceBusEmulator.Healthcheck.dll"
+    environment:
+      DOTNET_ENVIRONMENT: "Development"
+    image: "servicebusemulator.healthcheck:dev"
+    ports: []
+    volumes:
+    - "C:\\Users\\jerem\\repos\\Testing\\ServiceBusEmulator\\ServiceBusEmulator.Healthcheck:/app:rw"
+    - "C:\\Users\\jerem\\repos\\Testing\\ServiceBusEmulator:/src:rw"
+    - "C:\\Users\\jerem\\.nuget\\packages:/root/.nuget/packages"
+    working_dir: "/app"
