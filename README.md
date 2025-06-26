@@ -3,8 +3,6 @@
 This is a simple healthcheck for the Azure Service Bus Emulator. 
 It checks if the emulator is running and accessible based on the `Config.json` file.
 
-It is available as the `jeremysv/azure-service-bus-emulator-healthcheck` Docker image.
-
 ### Usage
 
 See [Service Bus Emulator](https://learn.microsoft.com/en-us/azure/service-bus-messaging/test-locally-with-service-bus-emulator?tabs=docker-linux-container) for details 
@@ -15,6 +13,7 @@ and test the queues and topics defined in it.
 Example `docker-compose.yml`:
 
 ```yaml
+
 name: servicebus
 
 services:
@@ -29,9 +28,17 @@ services:
       timeout: 3s
       retries: 5
       start_interval: 5s
+      start_period: 5s
 
   servicebus:
-    image: jeremysv/azure-service-bus-emulator-healthcheck:latest
+    build:
+      dockerfile_inline: |
+        FROM alpine:latest AS download
+        RUN apk add --no-cache curl jq && \
+            curl -sSfL "https://raw.githubusercontent.com/jeremy-morren/azure-service-bus-emulator-healthcheck/refs/heads/main/Download.sh" \
+            | /bin/sh -s - /Healthcheck
+        FROM mcr.microsoft.com/azure-messaging/servicebus-emulator:latest AS final
+        COPY --from=download --chmod=500 /Healthcheck /Healthcheck
     volumes:
       - './Config.json:/ServiceBus_Emulator/ConfigFiles/Config.json:ro'
     ports:
@@ -46,9 +53,10 @@ services:
       SQL_WAIT_INTERVAL: '1'
       MSSQL_SA_PASSWORD: 'StrongPassword1234!'
     healthcheck:
-      test: ['CMD', '/ServiceBusEmulator.Healthcheck']
+      test: ['CMD', '/Healthcheck/ServiceBusEmulator.Healthcheck']
       interval: 10s
       timeout: 3s
       retries: 5
-      start_interval: 10s
+      start_interval: 3s
+      start_period: 5s
 ```

@@ -25,7 +25,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <None Include="../Compose/Config.json"
+        <None Include="../Test/Config.json"
               CopyToOutputDirectory="Always"/>
     </ItemGroup>
 

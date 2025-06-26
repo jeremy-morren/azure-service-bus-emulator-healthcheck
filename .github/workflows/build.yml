@@ -1,0 +1,132 @@
+name: Build
+on:
+  # Trigger the workflow on pushes to only the 'main' branch
+  push:
+    branches: [ main ]
+  # Trigger the workflow on any pull request
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Run the tests on the latest Ubuntu runner
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    env:
+      project: 'src/ServiceBusEmulator.Healthcheck.Tests/ServiceBusEmulator.Healthcheck.Tests.csproj'
+      dockerTest: src/Test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build
+        run: dotnet build ${{ env.project }} -c Release
+
+      - name: Start ServiceBus Emulator
+        working-directory: src/Test
+        run: >-
+          docker compose up -d --wait &&
+          curl 'http://localhost:5300/health' -i --retry 10 --retry-all-errors --retry-max-time 60 --retry-delay 5
+
+      - name: Test
+        id: test
+        run: dotnet test  ${{ env.project }} --no-build --configuration Release --logger trx --results-directory TestResults
+
+      - name: Upload dotnet test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults
+        if: ${{ always() }}
+
+  build:
+    strategy:
+      matrix:
+        runner: [ ubuntu-latest , ubuntu-24.04-arm ]
+
+    name: Build on ${{ matrix.runner }}
+    runs-on: ${{ matrix.runner }}
+    env:
+      project: 'src/ServiceBusEmulator.Healthcheck/ServiceBusEmulator.Healthcheck.csproj'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      
+      - name: Restore
+        run: dotnet restore ${{ env.project }}
+
+      - name: Publish
+        run: dotnet publish ${{ env.project }} -c Release -o ${{ runner.temp }}/publish
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.runner }}
+          path: ${{ runner.temp }}/publish
+  
+  # Prepare a draft release for GitHub Releases page for the manual verification
+  releaseDraft:
+    name: Release draft
+    if: github.event_name != 'pull_request'
+    needs: [ build, test ]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      artifacts: artifacts
+      filename: ServiceBusEmulator.Healthcheck
+      tarOut: artifacts/ServiceBusEmulator.Healthcheck
+    steps:
+      # Check out the current repository
+      - name: Fetch Sources
+        uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+
+      # Create the artifacts
+      # Compress the full build results to .tar.gz
+
+      - run: >-
+          mkdir ${{ env.artifacts }} &&
+          tar -czf ${{ env.tarOut }}-amd64.tar.gz -C build-ubuntu-latest . &&
+          tar -czf ${{ env.tarOut }}-arm64.tar.gz -C build-ubuntu-24.04-arm . &&
+          ls -l ${{ env.artifacts }}
+        name: Create artifacts
+
+      # Get the version number
+      - name: Get Version
+        run: >-
+          version=$(cat version) && 
+          echo "Version: v$version" && 
+          echo "VERSION=v$(cat version)" >> $GITHUB_ENV
+
+      # Remove old release drafts by using the curl request for the available releases with a draft flag
+      - name: Remove Old Release Drafts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >-
+          gh api repos/{owner}/{repo}/releases 
+          --jq '.[] | select(.draft == true) | .id'
+          | xargs -I '{}' gh api -X DELETE repos/{owner}/{repo}/releases/{}
+
+      # Create a new release draft which is not publicly visible and requires manual acceptance
+      - name: Create Release Draft
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >-
+          gh release create "$VERSION" 
+          --draft --title "$VERSION" --generate-notes 
+          --target ${{ github.sha }} &&
+          gh release upload "$VERSION" artifacts/*
+

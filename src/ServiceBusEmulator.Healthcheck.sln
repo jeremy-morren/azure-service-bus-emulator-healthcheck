@@ -4,10 +4,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceBusEmulator.Healthch
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceBusEmulator.Healthcheck.Tests", "ServiceBusEmulator.Healthcheck.Tests\ServiceBusEmulator.Healthcheck.Tests.csproj", "{42441310-5ED1-4C7D-A672-8079199531DF}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Compose", "Compose", "{48BE0D33-DE69-4B80-843B-F2F65C24E0CD}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Test", "Test", "{48BE0D33-DE69-4B80-843B-F2F65C24E0CD}"
 	ProjectSection(SolutionItems) = preProject
-		Compose\Config.json = Compose\Config.json
-		Compose\docker-compose.yaml = Compose\docker-compose.yaml
+		Test\Config.json = Test\Config.json
+		Test\docker-compose.yaml = Test\docker-compose.yaml
+		Test\Dockerfile = Test\Dockerfile
 	EndProjectSection
 EndProject
 Global

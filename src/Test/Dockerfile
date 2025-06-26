@@ -8,7 +8,4 @@ COPY . .
 RUN dotnet publish -c Release -o /publish -r linux-x64 -p 'PublishAot=true'
 
 FROM mcr.microsoft.com/azure-messaging/servicebus-emulator:latest AS final
-
-# Ignore the .dbg file, we don't need it (saves 15MB)
-# See https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/diagnostics#importance-of-the-symbol-file
-COPY --from=build /publish/ServiceBusEmulator.Healthcheck /
+COPY --from=build /publish /Healthcheck
