@@ -16,17 +16,20 @@ fi
 arch="$(uname -m)"
 if [ "$arch" = "x86_64" ]; then 
     arch="amd64"
-elif [ "$$arch" = "aarch64" ]; then
+elif [ "$arch" = "aarch64" ]; then
     arch="arm64"
 else
     echo "Unsupported architecture: $arch"
     exit 1
 fi
 
+# Retry options for curl to handle transient network issues
+curl_retry_opts="--retry 5 --retry-delay 2 --retry-max-time 120 --retry-all-errors"
+
 # Get the latest release from GitHub
-url="$(curl 'https://api.github.com/repos/jeremy-morren/azure-service-bus-emulator-healthcheck/releases/latest' -sSfL \
+url="$(curl $curl_retry_opts 'https://api.github.com/repos/jeremy-morren/azure-service-bus-emulator-healthcheck/releases/latest' -sSfL \
     | jq -r --arg arch "$arch" '.assets[] | select(.name | endswith($arch + ".tar.gz")) | .browser_download_url')"
 
 # Download and extract the tar artifact
 mkdir -p "$1"
-curl -fL "$url" | tar -xvz -C "$1"
+curl $curl_retry_opts -fL "$url" | tar -xvz -C "$1"
