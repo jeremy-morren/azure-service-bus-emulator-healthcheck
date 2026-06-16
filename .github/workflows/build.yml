@@ -2,7 +2,7 @@ name: Build
 on:
   # Trigger the workflow on pushes to only the 'main' branch
   push:
-    branches: [ main ]
+    branches: [ main, actions ]
   # Trigger the workflow on any pull request
   pull_request:
 
@@ -15,19 +15,23 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    permissions:
+      # Required permissions for EnricoMi/publish-unit-test-result-action@v2
+      checks: write
+      pull-requests: write
     env:
       project: 'src/ServiceBusEmulator.Healthcheck.Tests/ServiceBusEmulator.Healthcheck.Tests.csproj'
       dockerTest: src/Test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '8.0.x'
 
       - name: Build
-        run: dotnet build ${{ env.project }} -c Release
+        run: dotnet publish ${{ env.project }} -c Release -r linux-x64 -o src/publish "/p:AotMsCodeCoverageInstrumentation=true"
 
       - name: Start ServiceBus Emulator
         working-directory: src/Test
@@ -37,14 +41,21 @@ jobs:
 
       - name: Test
         id: test
-        run: dotnet test  ${{ env.project }} --no-build --configuration Release --logger trx --results-directory TestResults
+        run: src/publish/ServiceBusEmulator.Healthcheck.Tests --coverage --report-trx --results-directory ${{ runner.temp }}/TestResults
 
       - name: Upload dotnet test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-results
-          path: TestResults
+          path: ${{ runner.temp }}/TestResults
         if: ${{ always() }}
+        
+      # Publish test results to job summary
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: ${{ always() }}
+        with:
+          files: ${{ runner.temp }}/TestResults/**/*.trx
 
   build:
     strategy:
@@ -56,10 +67,10 @@ jobs:
     env:
       project: 'src/ServiceBusEmulator.Healthcheck/ServiceBusEmulator.Healthcheck.csproj'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '8.0.x'
       
@@ -67,10 +78,10 @@ jobs:
         run: dotnet restore ${{ env.project }}
 
       - name: Publish
-        run: dotnet publish ${{ env.project }} -c Release -o ${{ runner.temp }}/publish
+        run: dotnet publish ${{ env.project }} -o ${{ runner.temp }}/publish
       
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: build-${{ matrix.runner }}
           path: ${{ runner.temp }}/publish
@@ -85,24 +96,11 @@ jobs:
       contents: write
     env:
       artifacts: artifacts
-      filename: ServiceBusEmulator.Healthcheck
       tarOut: artifacts/ServiceBusEmulator.Healthcheck
     steps:
       # Check out the current repository
       - name: Fetch Sources
-        uses: actions/checkout@v4
-
-      - uses: actions/download-artifact@v4
-
-      # Create the artifacts
-      # Compress the full build results to .tar.gz
-
-      - run: >-
-          mkdir ${{ env.artifacts }} &&
-          tar -czf ${{ env.tarOut }}-amd64.tar.gz -C build-ubuntu-latest . &&
-          tar -czf ${{ env.tarOut }}-arm64.tar.gz -C build-ubuntu-24.04-arm . &&
-          ls -l ${{ env.artifacts }}
-        name: Create artifacts
+        uses: actions/checkout@v6
 
       # Get the version number
       - name: Get Version
@@ -111,8 +109,34 @@ jobs:
           echo "Version: v$version" && 
           echo "VERSION=v$(cat version)" >> $GITHUB_ENV
 
+      # Check if tag exists, if it does, skip the rest of the steps
+      - name: Check if tag exists
+        id: check_tag
+        run: >-
+          if git ls-remote --exit-code --tags origin "refs/tags/$VERSION" >/dev/null 2>&1; then
+            echo "Tag already exists: $VERSION"
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Tag does not exist: $VERSION"
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/download-artifact@v8
+        if: steps.check_tag.outputs.exists != 'true'
+
+      # Create the artifacts
+      # Compress the full build results to .tar.gz
+      - run: >-
+          mkdir ${{ env.artifacts }} &&
+          tar -czf ${{ env.tarOut }}-amd64.tar.gz -C build-ubuntu-latest . &&
+          tar -czf ${{ env.tarOut }}-arm64.tar.gz -C build-ubuntu-24.04-arm . &&
+          ls -l ${{ env.artifacts }}
+        name: Create artifacts
+        if: steps.check_tag.outputs.exists != 'true'
+
       # Remove old release drafts by using the curl request for the available releases with a draft flag
       - name: Remove Old Release Drafts
+        if: steps.check_tag.outputs.exists != 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: >-
@@ -122,6 +146,7 @@ jobs:
 
       # Create a new release draft which is not publicly visible and requires manual acceptance
       - name: Create Release Draft
+        if: steps.check_tag.outputs.exists != 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: >-

@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
     <PropertyGroup>
         <TargetFramework>net8.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
@@ -7,6 +6,10 @@
 
         <IsPackable>false</IsPackable>
         <IsTestProject>true</IsTestProject>
+
+        <OutputType>exe</OutputType>
+        <IsAotCompatible>true</IsAotCompatible>
+        <PublishAot>true</PublishAot>
     </PropertyGroup>
 
     <ItemGroup>
@@ -14,19 +17,19 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="coverlet.collector" Version="6.0.0"/>
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0"/>
-        <PackageReference Include="xunit" Version="2.5.3"/>
-        <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3"/>
-    </ItemGroup>
+        <!-- See https://devblogs.microsoft.com/dotnet/testing-your-native-aot-dotnet-apps/#how-to-test-your-apps-in-native-aot-mode -->
+        <PackageReference Include="MSTest.Engine" Version="2.0.0-alpha.26264.3" />
+        <PackageReference Include="MSTest.SourceGeneration" Version="2.0.0-alpha.26264.3" />
 
-    <ItemGroup>
-        <Using Include="Xunit"/>
-    </ItemGroup>
+        <PackageReference Include="Microsoft.CodeCoverage.MSBuild" Version="18.8.0" />
+        <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.8.0" />
 
-    <ItemGroup>
-        <None Include="../Test/Config.json"
-              CopyToOutputDirectory="Always"/>
+        <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" Version="2.2.3" />
+        <PackageReference Include="Microsoft.Testing.Platform.MSBuild" Version="2.2.3" />
+        <PackageReference Include="MSTest.TestFramework" Version="4.2.3" />
+        <PackageReference Include="MSTest.Analyzers" Version="4.2.3">
+          <PrivateAssets>all</PrivateAssets>
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
     </ItemGroup>
-
 </Project>
