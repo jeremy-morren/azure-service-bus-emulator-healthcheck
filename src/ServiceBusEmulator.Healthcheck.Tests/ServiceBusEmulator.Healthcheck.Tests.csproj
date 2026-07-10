@@ -26,8 +26,8 @@
 
         <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" Version="2.2.3" />
         <PackageReference Include="Microsoft.Testing.Platform.MSBuild" Version="2.3.0" />
-        <PackageReference Include="MSTest.TestFramework" Version="4.2.3" />
-        <PackageReference Include="MSTest.Analyzers" Version="4.2.3">
+        <PackageReference Include="MSTest.TestFramework" Version="4.3.0" />
+        <PackageReference Include="MSTest.Analyzers" Version="4.3.0">
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
