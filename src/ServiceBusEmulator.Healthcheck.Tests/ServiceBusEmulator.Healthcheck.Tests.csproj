@@ -19,7 +19,7 @@
     <ItemGroup>
         <!-- See https://devblogs.microsoft.com/dotnet/testing-your-native-aot-dotnet-apps/#how-to-test-your-apps-in-native-aot-mode -->
         <PackageReference Include="MSTest.Engine" Version="2.0.0-alpha.26264.3" />
-        <PackageReference Include="MSTest.SourceGeneration" Version="2.0.0-alpha.26264.3" />
+        <PackageReference Include="MSTest.SourceGeneration" Version="2.0.0-alpha.26363.8" />
 
         <PackageReference Include="Microsoft.CodeCoverage.MSBuild" Version="18.9.0" />
         <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.9.0" />
