@@ -102,12 +102,12 @@ jobs:
       - name: Fetch Sources
         uses: actions/checkout@v6
 
-      # Get the version number
+      # Get the version number from src/version.txt
       - name: Get Version
         run: >-
-          version=$(cat version) && 
-          echo "Version: v$version" && 
-          echo "VERSION=v$(cat version)" >> $GITHUB_ENV
+          version="v$(cat src/version.txt)" && 
+          echo "Version: ${version}" && 
+          echo "VERSION=${version}" >> $GITHUB_ENV
 
       # Check if tag exists, if it does, skip the rest of the steps
       - name: Check if tag exists
@@ -125,13 +125,22 @@ jobs:
         if: steps.check_tag.outputs.exists != 'true'
 
       # Create the artifacts
-      # Compress the full build results to .tar.gz
+
+      # Compress the full build results to .tar.gz (gzip -9 maximum compression)
       - run: >-
           mkdir ${{ env.artifacts }} &&
-          tar -czf ${{ env.tarOut }}-amd64.tar.gz -C build-ubuntu-latest . &&
-          tar -czf ${{ env.tarOut }}-arm64.tar.gz -C build-ubuntu-24.04-arm . &&
+          tar --use-compress-program='gzip -9' -cf ${{ env.tarOut }}-amd64.tar.gz -C build-ubuntu-latest . &&
+          tar --use-compress-program='gzip -9' -cf ${{ env.tarOut }}-arm64.tar.gz -C build-ubuntu-24.04-arm . &&
           ls -l ${{ env.artifacts }}
-        name: Create artifacts
+        name: Create gzip artifacts
+        if: steps.check_tag.outputs.exists != 'true'
+
+      # Compress the full build results to .tar.br (brotli --best maximum compression)
+      - run: >-
+          tar --use-compress-program='brotli --best' -cf ${{ env.tarOut }}-amd64.tar.br -C build-ubuntu-latest . &&
+          tar --use-compress-program='brotli --best' -cf ${{ env.tarOut }}-arm64.tar.br -C build-ubuntu-24.04-arm . &&
+          ls -l ${{ env.artifacts }}
+        name: Create brotli artifacts
         if: steps.check_tag.outputs.exists != 'true'
 
       # Remove old release drafts by using the curl request for the available releases with a draft flag
