@@ -95,8 +95,14 @@ jobs:
     permissions:
       contents: write
     env:
-      artifacts: artifacts
-      tarOut: artifacts/ServiceBusEmulator.Healthcheck
+      artifacts: $GITHUB_WORKSPACE/artifacts
+      tarOut: $GITHUB_WORKSPACE/artifacts/ServiceBusEmulator.Healthcheck-$VERSION
+
+      # Compress to .tar.gz (gzip -9 maximum compression)
+      tarArgs: --create --use-compress-program='gzip -9'
+      # Tar args (1 that excludes debug symbols and adds everything else, and 1 that includes only debug symbols)
+      tarExcludeDbg: --exclude='*.dbg' .
+      includeDbg: '*.dbg'
     steps:
       # Check out the current repository
       - name: Fetch Sources
@@ -109,6 +115,22 @@ jobs:
           echo "Version: ${version}" && 
           echo "VERSION=${version}" >> $GITHUB_ENV
 
+      # Compress the artifacts from the build jobs into .tar.gz files for each architecture
+      - name: Download build artifacts
+        uses: actions/download-artifact@v8
+
+      # Create 2 tar.gz files for each architecture: one with debug symbols and one without
+      - run: >-
+          mkdir ${{ env.artifacts }} &&
+          cd ${{ github.workspace }}/build-ubuntu-latest &&
+          tar ${{ env.tarArgs }} -f ${{ env.tarOut }}-amd64.tar.gz ${{ env.tarExcludeDbg }} &&
+          tar ${{ env.tarArgs }} -f ${{ env.tarOut }}-amd64-debug.tar.gz ${{ env.includeDbg }} &&
+          cd ${{ github.workspace }}/build-ubuntu-24.04-arm &&
+          tar ${{ env.tarArgs }} -f ${{ env.tarOut }}-arm64.tar.gz ${{ env.tarExcludeDbg }} &&
+          tar ${{ env.tarArgs }} -f ${{ env.tarOut }}-arm64-debug.tar.gz ${{ env.includeDbg }} &&
+          ls -l ${{ env.artifacts }}
+        name: Create gzip artifacts
+
       # Check if tag exists, if it does, skip the rest of the steps
       - name: Check if tag exists
         id: check_tag
@@ -120,28 +142,6 @@ jobs:
             echo "Tag does not exist: $VERSION"
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
-
-      - uses: actions/download-artifact@v8
-        if: steps.check_tag.outputs.exists != 'true'
-
-      # Create the artifacts
-
-      # Compress the full build results to .tar.gz (gzip -9 maximum compression)
-      - run: >-
-          mkdir ${{ env.artifacts }} &&
-          tar --use-compress-program='gzip -9' -cf ${{ env.tarOut }}-amd64.tar.gz -C build-ubuntu-latest . &&
-          tar --use-compress-program='gzip -9' -cf ${{ env.tarOut }}-arm64.tar.gz -C build-ubuntu-24.04-arm . &&
-          ls -l ${{ env.artifacts }}
-        name: Create gzip artifacts
-        if: steps.check_tag.outputs.exists != 'true'
-
-      # Compress the full build results to .tar.br (brotli --best maximum compression)
-      - run: >-
-          tar --use-compress-program='brotli --best' -cf ${{ env.tarOut }}-amd64.tar.br -C build-ubuntu-latest . &&
-          tar --use-compress-program='brotli --best' -cf ${{ env.tarOut }}-arm64.tar.br -C build-ubuntu-24.04-arm . &&
-          ls -l ${{ env.artifacts }}
-        name: Create brotli artifacts
-        if: steps.check_tag.outputs.exists != 'true'
 
       # Remove old release drafts by using the curl request for the available releases with a draft flag
       - name: Remove Old Release Drafts

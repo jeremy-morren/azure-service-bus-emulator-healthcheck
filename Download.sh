@@ -30,6 +30,11 @@ curl_retry_opts="--retry 5 --retry-delay 2 --retry-max-time 120 --retry-all-erro
 url="$(curl $curl_retry_opts 'https://api.github.com/repos/jeremy-morren/azure-service-bus-emulator-healthcheck/releases/latest' -sSfL \
     | jq -r --arg arch "$arch" '.assets[] | select(.name | endswith($arch + ".tar.gz")) | .browser_download_url')"
 
+if [ -z "$url" ]; then
+    echo "Could not find a release for architecture: $arch"
+    exit 1
+fi
+
 # Download and extract the tar artifact
 mkdir -p "$1"
 curl $curl_retry_opts -fL "$url" | tar -xvz -C "$1"
