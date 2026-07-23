@@ -3,17 +3,18 @@
 This is a simple healthcheck for the Azure Service Bus Emulator. 
 It checks if the emulator is running and accessible based on the `Config.json` file.
 
-### Usage
-
 See [Service Bus Emulator](https://learn.microsoft.com/en-us/azure/service-bus-messaging/test-locally-with-service-bus-emulator?tabs=docker-linux-container) for details 
 on using the Azure Service Bus Emulator.
 The healthcheck will read the `Config.json` file (i.e. the config file provided to the emulator when it was started) 
 and test the queues and topics defined in it.
 
+### Usage
+
+See [Download.sh](./Download.sh) for the download script used below.
+
 Example `docker-compose.yml`:
 
 ```yaml
-
 name: servicebus
 
 services:
@@ -35,7 +36,8 @@ services:
       dockerfile_inline: |
         FROM alpine:latest AS download
         RUN apk add --no-cache curl jq && \
-            curl -sSfL "https://raw.githubusercontent.com/jeremy-morren/azure-service-bus-emulator-healthcheck/refs/heads/main/Download.sh" \
+            curl -sSL --fail-with-body --retry 3 --retry-delay 30 \
+              "https://raw.githubusercontent.com/jeremy-morren/azure-service-bus-emulator-healthcheck/refs/heads/main/Download.sh" \
             | /bin/sh -s - /Healthcheck
         FROM mcr.microsoft.com/azure-messaging/servicebus-emulator:latest AS final
         COPY --from=download --chmod=500 /Healthcheck /Healthcheck
