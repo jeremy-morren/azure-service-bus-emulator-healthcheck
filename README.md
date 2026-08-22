@@ -10,7 +10,10 @@ and test the queues and topics defined in it.
 
 ### Usage
 
-See [Download.sh](./Download.sh) for the download script used below.
+Pull the multi-arch `ghcr.io/jeremy-morren/servicebus-emulator-healthcheck:latest` image, which contains binaries in `/Healthcheck`.
+
+Images are published for `linux/amd64` and `linux/arm64` (the docker client pulls the binaries for the relevant platform), 
+tagged `latest` as well as per release (e.g. `v0.2.0`). The binaries are identical to those attached to the corresponding [release](https://github.com/jeremy-morren/azure-service-bus-emulator-healthcheck/releases).
 
 Example `docker-compose.yml`:
 
@@ -34,13 +37,9 @@ services:
   servicebus:
     build:
       dockerfile_inline: |
-        FROM alpine:latest AS download
-        RUN apk add --no-cache curl jq && \
-            curl -sSL --fail-with-body --retry 3 --retry-delay 30 \
-              "https://raw.githubusercontent.com/jeremy-morren/azure-service-bus-emulator-healthcheck/refs/heads/main/Download.sh" \
-            | /bin/sh -s - /Healthcheck
+        FROM ghcr.io/jeremy-morren/servicebus-emulator-healthcheck:latest AS healthcheck
         FROM mcr.microsoft.com/azure-messaging/servicebus-emulator:latest AS final
-        COPY --from=download --chmod=500 /Healthcheck /Healthcheck
+        COPY --from=healthcheck --chmod=500 / /Healthcheck
     volumes:
       - './Config.json:/ServiceBus_Emulator/ConfigFiles/Config.json:ro'
     ports:

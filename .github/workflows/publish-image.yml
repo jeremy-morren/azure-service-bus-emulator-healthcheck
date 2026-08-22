@@ -1,0 +1,176 @@
+name: Publish image
+
+# Publishes the multi-arch container image containing the healthcheck binaries in /Healthcheck.
+# The image is built from the .tar.gz assets attached to the release, so the binaries in the
+# image are exactly the binaries in the release.
+
+on:
+  # Trigger when a release draft is published
+  release:
+    types: [ published ]
+
+  # Allow re-publishing the image for an existing release
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to publish the image for (e.g. v0.2.0)'
+        required: true
+        type: string
+      latest:
+        description: 'Also update the :latest tag'
+        required: false
+        default: true
+        type: boolean
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  image:
+    name: Publish image
+    runs-on: ubuntu-latest
+    permissions:
+      # Required to download the release assets
+      contents: read
+      # Required to push the image to ghcr.io
+      packages: write
+      # Required to mint the OIDC token used for keyless cosign signing
+      id-token: write
+      # Required to publish SLSA provenance/SBOM attestations
+      attestations: write
+    env:
+      image: ghcr.io/${{ github.repository_owner }}/servicebus-emulator-healthcheck
+      # The release the image is built from
+      tag: ${{ github.event.release.tag_name || inputs.tag }}
+      # Update :latest for full releases only (a pre-release must not move :latest)
+      latest: ${{ github.event_name == 'workflow_dispatch' && inputs.latest == true || github.event_name == 'release' && github.event.release.prerelease == false }}
+    steps:
+      # Check out the current repository (for .github/docker/Dockerfile)
+      - name: Fetch Sources
+        uses: actions/checkout@v6
+
+      # Download the (non-debug) release assets for each architecture
+      - name: Download release assets
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >-
+          gh release download "$tag" --dir "$RUNNER_TEMP/assets"
+          --pattern '*-amd64.tar.gz' --pattern '*-arm64.tar.gz' &&
+          ls -l "$RUNNER_TEMP/assets"
+
+      # Extract the assets into the build context: one directory per architecture
+      - name: Create build context
+        run: |
+          set -e
+          for arch in amd64 arm64; do
+            asset="$(ls "$RUNNER_TEMP"/assets/*-"$arch".tar.gz)"
+            echo "Extracting $asset"
+            mkdir -p "$RUNNER_TEMP/context/$arch"
+            tar -xzf "$asset" -C "$RUNNER_TEMP/context/$arch"
+          done
+          ls -lR "$RUNNER_TEMP/context"
+
+      # Always tag the release version, and optionally :latest
+      - name: Determine tags
+        run: |
+          tags="--tag $image:$tag"
+          if [ "$latest" = "true" ]; then
+            tags="$tags --tag $image:latest"
+          fi
+          echo "Tags: $tags"
+          echo "tags=$tags" >> "$GITHUB_ENV"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Build and push the multi-arch image. There are no RUN instructions in the Dockerfile,
+      # so no QEMU emulation is required to build the non-native platform.
+      # BuildKit's own --provenance/--sbom are disabled because they embed attestations 
+      # as extra "unknown/unknown" manifests in the index.
+      # Provenance/SBOM/signature are instead attested out-of-band below, keyed off the
+      # index digest, which leaves the manifest list untouched.
+      - name: Build and push image
+        run: >-
+          docker buildx build "$RUNNER_TEMP/context"
+          --file .github/docker/Dockerfile
+          --platform linux/amd64,linux/arm64
+          --provenance=false --sbom=false
+          --label org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          --label org.opencontainers.image.revision=${{ github.sha }}
+          --label org.opencontainers.image.version="$tag"
+          --label org.opencontainers.image.licenses=MIT
+          --label org.opencontainers.image.description='Healthcheck binaries for the Azure Service Bus Emulator'
+          $tags
+          --push
+          --metadata-file "$RUNNER_TEMP/metadata.json"
+
+      # The multi-arch push produces a single manifest-list (index) digest that covers
+      # both platforms; every attestation below is anchored to that one digest.
+      - name: Determine image digest
+        run: |
+          set -e
+          digest="$(jq -r '."containerimage.digest"' "$RUNNER_TEMP/metadata.json")"
+          echo "Digest: $digest"
+          echo "digest=$digest" >> "$GITHUB_ENV"
+
+      # SLSA build provenance: attests that this exact workflow run, on this commit,
+      # produced the image. Published to GitHub's Sigstore-backed attestation store
+      # and, via push-to-registry, as an OCI 1.1 referrer on ghcr.io.
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.image }}
+          subject-digest: ${{ env.digest }}
+          push-to-registry: true
+
+      # Generate an SBOM for the pushed image directly from the registry (no local
+      # docker load needed) and attest it the same way as provenance.
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ env.image }}@${{ env.digest }}
+          format: spdx-json
+          output-file: sbom.spdx.json
+          upload-artifact: false
+
+      - name: Attest SBOM
+        uses: actions/attest-sbom@v2
+        with:
+          subject-name: ${{ env.image }}
+          subject-digest: ${{ env.digest }}
+          sbom-path: sbom.spdx.json
+          push-to-registry: true
+
+      # Keyless-sign the image with cosign using this job's OIDC identity; the
+      # signature and certificate are recorded in the public Rekor transparency log.
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign image with cosign
+        run: cosign sign --yes "$image@$digest"
+
+      # Print the resulting manifest list and attestation/verification details
+      - name: Inspect image
+        run: |
+          docker buildx imagetools inspect "$image:$tag"
+          {
+            echo "### Published \`$image:$tag\`"
+            echo "Digest: \`$digest\`"
+            echo ""
+            echo "Verify provenance/SBOM:"
+            echo '```'
+            echo "gh attestation verify oci://$image@$digest --owner ${{ github.repository_owner }}"
+            echo '```'
+            echo "Verify signature:"
+            echo '```'
+            echo "cosign verify \"$image@$digest\" --certificate-identity-regexp '^${{ github.server_url }}/${{ github.repository }}/' --certificate-oidc-issuer https://token.actions.githubusercontent.com"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
