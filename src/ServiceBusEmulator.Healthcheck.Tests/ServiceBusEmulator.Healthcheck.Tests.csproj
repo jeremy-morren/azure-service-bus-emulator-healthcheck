@@ -21,7 +21,7 @@
         <PackageReference Include="MSTest.Engine" Version="2.0.0-alpha.26264.3" />
         <PackageReference Include="MSTest.SourceGeneration" Version="2.0.0-alpha.26264.3" />
 
-        <PackageReference Include="Microsoft.CodeCoverage.MSBuild" Version="18.10.0" />
+        <PackageReference Include="Microsoft.CodeCoverage.MSBuild" Version="18.11.0" />
         <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.10.0" />
 
         <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" Version="2.3.3" />
