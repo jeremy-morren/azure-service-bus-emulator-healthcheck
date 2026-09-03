@@ -10,7 +10,7 @@ and test the queues and topics defined in it.
 
 ### Usage
 
-Pull the multi-arch `ghcr.io/jeremy-morren/servicebus-emulator-healthcheck:latest` image, which contains binaries in `/Healthcheck`.
+Pull the multi-arch `ghcr.io/jeremy-morren/servicebus-emulator-healthcheck:latest` image, which contains binaries in `/`.
 
 Images are published for `linux/amd64` and `linux/arm64` (the docker client pulls the binaries for the relevant platform), 
 tagged `latest` as well as per release (e.g. `v0.2.0`). The binaries are identical to those attached to the corresponding [release](https://github.com/jeremy-morren/azure-service-bus-emulator-healthcheck/releases).
