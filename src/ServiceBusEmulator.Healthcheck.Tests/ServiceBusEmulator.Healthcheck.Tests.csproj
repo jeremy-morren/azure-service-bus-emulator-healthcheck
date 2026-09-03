@@ -6,6 +6,8 @@
 
         <IsPackable>false</IsPackable>
         <IsTestProject>true</IsTestProject>
+        <IsTestApplication>true</IsTestApplication>
+        <EnableMSTestRunner>true</EnableMSTestRunner>
 
         <OutputType>exe</OutputType>
         <IsAotCompatible>true</IsAotCompatible>
@@ -18,14 +20,14 @@
 
     <ItemGroup>
         <!-- See https://devblogs.microsoft.com/dotnet/testing-your-native-aot-dotnet-apps/#how-to-test-your-apps-in-native-aot-mode -->
-        <PackageReference Include="MSTest.Engine" Version="2.0.0-alpha.26264.3" />
-        <PackageReference Include="MSTest.SourceGeneration" Version="2.0.0-alpha.26264.3" />
+        <PackageReference Include="MSTest.SourceGeneration" Version="4.4.0" />
+        <PackageReference Include="MSTest.TestAdapter" Version="4.4.0" />
 
         <PackageReference Include="Microsoft.CodeCoverage.MSBuild" Version="18.11.0" />
-        <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.10.0" />
+        <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.11.0" />
 
-        <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" Version="2.3.3" />
-        <PackageReference Include="Microsoft.Testing.Platform.MSBuild" Version="2.3.3" />
+        <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" Version="2.4.0" />
+        <PackageReference Include="Microsoft.Testing.Platform.MSBuild" Version="2.4.0" />
         <PackageReference Include="MSTest.TestFramework" Version="4.4.0" />
         <PackageReference Include="MSTest.Analyzers" Version="4.4.0">
           <PrivateAssets>all</PrivateAssets>
