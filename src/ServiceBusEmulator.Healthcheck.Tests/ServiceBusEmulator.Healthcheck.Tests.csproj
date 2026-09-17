@@ -20,7 +20,7 @@
 
     <ItemGroup>
         <!-- See https://devblogs.microsoft.com/dotnet/testing-your-native-aot-dotnet-apps/#how-to-test-your-apps-in-native-aot-mode -->
-        <PackageReference Include="MSTest.SourceGeneration" Version="4.4.0" />
+        <PackageReference Include="MSTest.SourceGeneration" Version="4.4.1" />
         <PackageReference Include="MSTest.TestAdapter" Version="4.4.0" />
 
         <PackageReference Include="Microsoft.CodeCoverage.MSBuild" Version="18.11.2" />
