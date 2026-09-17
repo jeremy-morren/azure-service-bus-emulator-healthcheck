@@ -4,4 +4,8 @@ updates:
     directory: "/src"
     schedule:
       interval: "daily"
+    groups:
+      dependencies:
+        patterns:
+          - "*"
     open-pull-requests-limit: 10
